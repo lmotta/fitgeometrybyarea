@@ -3,7 +3,7 @@ name:Fit Geometry by Area
 description:This plugin lets you change the geometry by a field that have a area value you want fit it.
 about:This plugin lets you change the geometry by a field that have a area value you want fit it.
 
-version: 1.0
+version: 1.1
 qgisMinimumVersion: 3.16
 
 author:Luiz Motta
@@ -22,5 +22,7 @@ icon:fitgeometrybyarea.svg
 experimental:False
 deprecated:False
 
-changelog: 0.1(2020-12-09)
+changelog: 1.1(2021-04-09)
+  Use QTransform.fromScale for fit geometry
+  - 1.0(2020-12-09)
   Start of plugin
