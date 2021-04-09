@@ -320,16 +320,6 @@ class FitGeometryByArea(QObject):
         self.setWidgetDemoFeature( msg )
 
     def _getFitGeom(self, area, geom):
-        def moveVertexs(geom, f) :
-            idVertex = 1 # Polygon (Line begin with 1)
-            vertex = geom.vertexAt(idVertex)
-            while ( not vertex.isEmpty() ):
-                x = vertex.x() * f
-                y = vertex.y() * f
-                geom.moveVertex(x, y, idVertex )
-                idVertex += 1
-                vertex = geom.vertexAt(idVertex)
-
         def getCenterXY(geom):
             center = geom.centroid().asPoint()
             return { 'x': center.x(), 'y': center.y() }
@@ -343,15 +333,6 @@ class FitGeometryByArea(QObject):
         dy = center1['y'] - center2['y']
         ok = geom.translate( dx, dy )
         return geom
-        """
-        cent1 = geom.centroid().asPoint()
-        moveVertexs( geom, f )
-        cent2 = geom.centroid().asPoint()
-        dx = cent1.x() - cent2.x()
-        dy = cent1.y() - cent2.y()
-        geom.translate( dx, dy)
-        return geom
-        """
 
     def _getFitGeomTransform(self, area, geom):
         geom.transform( self.ct2Calc )
