@@ -39,6 +39,7 @@ from qgis.PyQt.QtWidgets import (
     QDockWidget, QGroupBox,
     QVBoxLayout, QHBoxLayout
 )
+from qgis.PyQt.QtGui import QTransform
 
 from qgis.core import (
     Qgis, QgsProject,
@@ -329,7 +330,20 @@ class FitGeometryByArea(QObject):
                 idVertex += 1
                 vertex = geom.vertexAt(idVertex)
 
-        f = math.sqrt( area / geom.area() )
+        def getCenterXY(geom):
+            center = geom.centroid().asPoint()
+            return { 'x': center.x(), 'y': center.y() }
+
+        center1 = getCenterXY( geom )
+        s = math.sqrt( area / geom.area() )
+        t = QTransform.fromScale( s, s )
+        ok = geom.transform( t )
+        center2 = getCenterXY( geom )
+        dx = center1['x'] - center2['x']
+        dy = center1['y'] - center2['y']
+        ok = geom.translate( dx, dy )
+        return geom
+        """
         cent1 = geom.centroid().asPoint()
         moveVertexs( geom, f )
         cent2 = geom.centroid().asPoint()
@@ -337,6 +351,7 @@ class FitGeometryByArea(QObject):
         dy = cent1.y() - cent2.y()
         geom.translate( dx, dy)
         return geom
+        """
 
     def _getFitGeomTransform(self, area, geom):
         geom.transform( self.ct2Calc )
