@@ -71,81 +71,82 @@ class DockWidgetFitGeometryByArea(QDockWidget):
             s.setValue( self.localSetting.format( k ), params[ k ] )
 
         def setupUI():
-            @pyqtSlot(QgsCoordinateReferenceSystem)
-            def crsChanged(crs):
-                if crs.isGeographic():
-                    self.message('Invalid CRS(need be projected)', Qgis.Critical )
-                    self.crs.setCrs( self.crsCurrent )
-                    return
-                s = QgsUnitTypes.encodeUnit( crs.mapUnits() )
-                self.unit.setText(f"{s}^2")
-                setSetting( { 'crs': crs.authid() } )
-                self.crsCurrent = crs
+            def layoutLayer(parent):
+                lyt = QHBoxLayout()
+                w = QLabel('Layer:')
+                w.setToolTip('Need be a polygon layer')
+                lyt.addWidget( w )
+                w = QLabel('', parent)
+                w.setMargin(1)
+                self.__dict__['lbl_layer'] = w
+                lyt.addWidget( w )
+                s = QSpacerItem( 10, 10, QSizePolicy.Expanding, QSizePolicy.Minimum )
+                lyt.addItem( s )
+                return lyt
 
-            wgtMain = QWidget( self )
+            def layoutArea(parent):
+                @pyqtSlot(QgsCoordinateReferenceSystem)
+                def crsChanged(crs):
+                    if crs.isGeographic():
+                        self.message('Invalid CRS(need be projected)', Qgis.Critical )
+                        self.crs.setCrs( self.crsCurrent )
+                        return
+                    s = QgsUnitTypes.encodeUnit( crs.mapUnits() )
+                    self.unit.setText(f"{s}^2")
+                    setSetting( { 'crs': crs.authid() } )
+                    self.crsCurrent = crs
+
+                lytThis = QVBoxLayout()
+                w = QgsProjectionSelectionWidget( parent )
+                self.__dict__['crs'] = w
+                w.crsChanged.connect( crsChanged )
+                lytThis.addWidget( w )
+                # Field and Apply
+                lyt = QHBoxLayout()
+                lyt.addWidget( QLabel('Field:') )
+                w = QgsFieldComboBox( parent )
+                w.setSizeAdjustPolicy( w.AdjustToContents)
+                self.__dict__['cmb_fields'] = w
+                w.setFilters( QgsFieldProxyModel.Double )
+                lyt.addWidget( w )
+                w = QLabel('', parent)
+                self.__dict__['unit'] = w
+                self.crs.setCrs( self.crsCurrent ) # Populate self.unit
+                lyt.addWidget( w )
+                s = QSpacerItem( 10, 10, QSizePolicy.Expanding, QSizePolicy.Minimum )                
+                lyt.addItem( s )
+                w = QPushButton('Fit', parent )
+                self.__dict__['btn_fit'] = w
+                w.setIcon( self.iconApply )
+                lyt.addWidget( w )
+                lytThis.addLayout( lyt )
+                # First Layer
+                lyt = QHBoxLayout()
+                w = QLabel('Feature:')
+                w.setToolTip('First selected feature')
+                lyt.addWidget( w )
+                w = QLabel('', parent )
+                self.__dict__['lbl_demo_feature'] = w
+                lyt.addWidget( w )
+                s = QSpacerItem( 10, 10, QSizePolicy.Expanding, QSizePolicy.Minimum )                
+                lyt.addItem( s )
+                lytThis.addLayout( lyt )
+                return lytThis
+
+            wgtMain = QGroupBox('Fit geometry(selected features)', self )
+            self.__dict__['chk_fit'] = wgtMain
             wgtMain.setAttribute(Qt.WA_DeleteOnClose)
+            wgtMain.setCheckable( True )
+            wgtMain.setChecked( False )
             lytMain = QVBoxLayout()
-            spacer = QSpacerItem( 10, 10, QSizePolicy.Expanding, QSizePolicy.Minimum )
-            # Group Box and Layout Fit 
-            gpbFit = QGroupBox('Fit geometry(selected features)', wgtMain )
-            self.__dict__['chk_fit'] = gpbFit
-            gpbFit.setCheckable( True )
-            gpbFit.setChecked( False )
-            lytMain.addWidget( gpbFit )
-            lytFit = QVBoxLayout()
-            gpbFit.setLayout( lytFit )
-            # Layer
-            lyt = QHBoxLayout()
-            w = QLabel('Layer:')
-            w.setToolTip('Need be a polygon layer')
-            lyt.addWidget( w )
-            w = QLabel('')
-            w.setMargin(1)
-            self.__dict__['lbl_layer'] = w
-            lyt.addWidget( w )
-            lyt.addItem( spacer )
-            lytFit.addLayout( lyt )
-            # Area
-            gpbArea = QGroupBox('Area',  gpbFit )
-            lytFit.addWidget( gpbArea )
-            lytArea = QVBoxLayout()
-            gpbArea.setLayout( lytArea )
-            # . CRS
-            w = QgsProjectionSelectionWidget( gpbFit )
-            self.__dict__['crs'] = w
-            w.crsChanged.connect( crsChanged )
-            lytArea.addWidget( w )
-            # . Field and Apply
-            lyt = QHBoxLayout()
-            lyt.addWidget( QLabel('Field:') )
-            w = QgsFieldComboBox( gpbFit )
-            self.__dict__['cmb_fields'] = w
-            w.setFilters( QgsFieldProxyModel.Double )
-            lyt.addWidget( w )
-            w = QLabel('')
-            self.__dict__['unit'] = w
-            self.crs.setCrs( self.crsCurrent ) # Populate self.unit
-            lyt.addWidget( w )
-            lyt.addItem( spacer )
-            w = QPushButton('Fit', gpbFit )
-            self.__dict__['btn_fit'] = w
-            w.setIcon( self.iconApply )
-            lyt.addWidget( w )
-            lytArea.addLayout( lyt )
-            # . First Layer
-            lyt = QHBoxLayout()
-            w = QLabel('Feature:')
-            w.setToolTip('First selected feature')
-            lyt.addWidget( w )
-            w = QLabel('')
-            w.setAlignment( Qt.AlignLeft )
-            self.__dict__['lbl_demo_feature'] = w
-            lyt.addWidget( w )
-            lyt.addItem( spacer )
-            lytArea.addLayout( lyt )
             #
-            lytFit.addLayout( lytArea )
-            lytMain.addItem( spacer )
+            lytMain.addLayout( layoutLayer( wgtMain ) )
+            gpbArea = QGroupBox('Area',  wgtMain )
+            gpbArea.setLayout( layoutArea( wgtMain ) )
+            lytMain.addWidget( gpbArea )
+            #
+            s = QSpacerItem( 10, 10, QSizePolicy.Minimum, QSizePolicy.Expanding )
+            lytMain.addItem( s )
             wgtMain.setLayout( lytMain )
             self.setWidget( wgtMain )
 
@@ -214,10 +215,10 @@ class FitGeometryByArea(QObject):
         self.getFitGeom, self.ct2Calc, self.ct2Layer = None, None, None
 
         project.layerWillBeRemoved.connect( self.on_layerWillBeRemoved )
-
+        
     @pyqtSlot(str)
     def on_layerWillBeRemoved(self, id):
-        if self.layer and id == self.layer.id():
+        if self.layer and self.layer.id() == id:
             self.layer = None
             self.setWigetlayer() # Clean
 
@@ -235,6 +236,8 @@ class FitGeometryByArea(QObject):
         def clean(message=None):
             if message: self.message( message, Qgis.Warning )
             self.setWigetlayer()
+            if self.layer:
+                self.layer.selectionChanged.disconnect( self.on_selectionChanged )
             self.layer = None
 
         if checked:
@@ -249,7 +252,6 @@ class FitGeometryByArea(QObject):
                 clean(f"Layer '{lyr.name()}' missing double field.")
                 return
 
-            self.layer = lyr
             self.getFitGeom = self._getFitGeom
             crsLayer = lyr.crs()
             if not crsLayer == self.crsCurrent:
@@ -257,6 +259,10 @@ class FitGeometryByArea(QObject):
                 self.ct2Layer = QgsCoordinateTransform( self.crsCurrent, crsLayer,  self.context )
                 self.getFitGeom = self._getFitGeomTransform
             self.setWigetlayer( lyr ) # Change current Field
+            if lyr.selectedFeatureCount():
+                self._calcAreaDemoFeature()
+            lyr.selectionChanged.connect( self.on_selectionChanged )
+            self.layer = lyr
         else:
             clean()
 
@@ -292,32 +298,19 @@ class FitGeometryByArea(QObject):
         if not self.layer or index == -1:
             return
         
-        name = self.getWidgetField()
-        area = False
-        for feat in self.layer.selectedFeatures():
-            fid = feat.id()
-            area = feat[ name ]
-            geom = feat.geometry()
-            break
-
-        if area == False:
+        if not self.layer.selectedFeatureCount():
             self.setWidgetDemoFeature('')
+            msg = f"Layer '{self.layer.name()}' need selected feature"
+            self.message( msg, Qgis.Warning )
             return
 
-        if area is None:
-            self.message(f"Field '{name}' is empty", Qgis.Warning )
-            self.setWidgetDemoFeature('')
-            return
-        if geom is None:
-            self.message('Geometry is empty', Qgis.Warning )
-            self.setWidgetDemoFeature('')
-            return
+        self._calcAreaDemoFeature()
 
-        srcArea = geom.area()
-        fitArea = self.getFitGeom(area, QgsGeometry( geom ) ).area()
-        perc = 100 * ( 1 - srcArea / fitArea )
-        msg = f"[FID = {fid}] Geometry to Fit -> {perc:+0.6f}%"
-        self.setWidgetDemoFeature( msg )
+    @pyqtSlot('QgsFeatureIds', 'QgsFeatureIds', bool)
+    def on_selectionChanged(self, selected, deselected, clearAndSelect):
+        if not len( selected ):
+            return
+        self._calcAreaDemoFeature()
 
     def _getFitGeom(self, area, geom):
         def getCenterXY(geom):
@@ -339,5 +332,25 @@ class FitGeometryByArea(QObject):
         geom = self._getFitGeom( area, geom )
         geom.transform( self.ct2Layer )
         return geom
+
+    def _calcAreaDemoFeature(self):
+        name = self.getWidgetField()
+        # First Feature
+        feat = self.layer.selectedFeatures()[0]
+        fid, area, geom = feat.id(), feat[ name ], feat.geometry()
+        if area is None:
+            self.message(f"Field '{name}' is empty", Qgis.Warning )
+            self.setWidgetDemoFeature('')
+            return
+        if geom is None:
+            self.message('Geometry is empty', Qgis.Warning )
+            self.setWidgetDemoFeature('')
+            return
+
+        srcArea = geom.area()
+        fitArea = self.getFitGeom(area, QgsGeometry( geom ) ).area()
+        perc = 100 * ( 1 - srcArea / fitArea )
+        msg = f"[FID = {fid}] Geometry to Fit -> {perc:+0.6f}%"
+        self.setWidgetDemoFeature( msg )
 
 
